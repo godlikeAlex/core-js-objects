@@ -399,32 +399,115 @@ function group(array, keySelector, valueSelector) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  chain: [],
+
+  element(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(['element'], 'repeating'),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, value],
+    };
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(['element'], 'ordering'),
+      ...this.createDisabledMethod(['id'], 'repeating'),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, `#${value}`],
+    };
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(['element', 'id'], 'ordering'),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, `.${value}`],
+    };
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(['element', 'id', 'class'], 'ordering'),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, `[${value}]`],
+    };
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(
+        ['element', 'id', 'class', 'attr'],
+        'ordering'
+      ),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, `:${value}`],
+    };
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const disabledMethods = {
+      ...this.createDisabledMethod(['id', 'pseudoClass'], 'ordering'),
+      ...this.createDisabledMethod(['pseudoElement'], 'repeating'),
+    };
+
+    return {
+      ...this,
+      ...disabledMethods,
+      chain: [...this.chain, `::${value}`],
+    };
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return {
+      ...this,
+      chain: [...selector1.chain, ` ${combinator} `, ...selector2.chain],
+    };
+  },
+
+  stringify() {
+    return this.chain.join('');
+  },
+
+  createDisabledMethod(methods, errorType) {
+    const disabled = {};
+    let error;
+
+    if (errorType === 'repeating') {
+      error =
+        'Element, id and pseudo-element should not occur more then one time inside the selector';
+    } else {
+      error =
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element';
+    }
+
+    methods.forEach((method) => {
+      disabled[method] = () => {
+        throw new Error(error);
+      };
+    });
+
+    return disabled;
   },
 };
 
